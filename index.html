@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Generador de Rutas Turísticas</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+
+<style>
+  /* Mapa full screen */
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+  }
+  #map {
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* Pop-up flotante para el formulario */
+  .popup-form {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    width: 300px;
+    z-index: 1000;
+    font-size: 14px;
+  }
+
+  .popup-form label {
+    display: block;
+    margin-top: 10px;
+  }
+
+  .popup-form select,
+  .popup-form button {
+    width: 100%;
+    padding: 6px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+
+  .popup-form fieldset {
+    border: none;
+    margin-top: 10px;
+    padding: 0;
+  }
+
+  .popup-form input[type="checkbox"] {
+    margin-right: 5px;
+  }
+
+  .popup-form button {
+    background-color: #ffcc00;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .popup-form button:hover {
+    background-color: #ff9900;
+  }
+
+  /* Etiquetas visibles junto a marcadores */
+  .leaflet-label {
+    background-color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+</style>
+
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="popup-form">
+  <h3>Generar Ruta</h3>
+
+  <label for="start">Inicio:</label>
+  <select id="start"></select>
+
+  <label for="end">Destino:</label>
+  <select id="end"></select>
+
+  <fieldset>
+    <legend><strong>Preferencias:</strong></legend>
+    <label><input type="checkbox" name="preference" value="cultura"> Cultura</label>
+    <label><input type="checkbox" name="preference" value="naturaleza"> Naturaleza</label>
+    <label><input type="checkbox" name="preference" value="comercial"> Comercial</label>
+  </fieldset>
+
+  <label for="routeType">Tipo de Ruta:</label>
+  <select id="routeType">
+    <option value="corta">Más corta</option>
+    <option value="larga">Más larga</option>
+  </select>
+
+  <button onclick="getRoute()">Generar Ruta</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+<script>
+
+
+  const lugares = [
+  "Quito",
+  "Mitad del Mundo",
+  "Centro Histórico Quito",
+  "Parque La Carolina Quito",
+  "Papallacta",
+  "Otavalo",
+  "Mercado Artesanal Otavalo",
+  "Latacunga",
+  "Parque Nacional Cotopaxi",
+  "Reserva Mindo-Nambillo",
+  "Baños de Agua Santa",
+  "Cascadas de Pailon del Diablo",
+  "Volcán Tungurahua",
+  "Riobamba",
+  "Volcán Chimborazo",
+  "Tena",
+  "Parque Nacional Yasuni",
+  "Reserva Cuyabeno",
+  "Cuenca",
+  "Mirador Turi Cuenca",
+  "Catedral de Cuenca",
+  "Parque Nacional El Cajas",
+  "Loja",
+  "Zamora",
+  "Parque Nacional Podocarpus",
+  "Guayaquil",
+  "Malecón 2000 Guayaquil",
+  "Parque Histórico Guayaquil",
+  "Montañita",
+  "Playa de Salinas",
+  "Isla de la Plata",
+  "Esmeraldas",
+  "Playas de Esmeraldas",
+
+  "Museo",
+  "Reserva Yasuní",
+  "Parque Nacional Llanganates",
+  "Laguna Quilotoa",
+  "Parque Nacional Sangay",
+  "Reserva Bosque Petrificado Puyango",
+  "Volcán Sangay",
+  "Ibarra",
+  "Ambato",
+  "Santo Domingo",
+  "Guaranda",
+  "Zumbahua"
+];
+
+
+  const map = L.map('map').setView([-1.83, -78.18], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  let routingControl = null;
+  window.routeMarkers = [];
+
+  window.onload = () => {
+      const startSel = document.getElementById("start");
+      const endSel = document.getElementById("end");
+      lugares.forEach(l => {
+          startSel.innerHTML += `<option>${l}</option>`;
+          endSel.innerHTML += `<option>${l}</option>`;
+      });
+  };
+
+  async function getRoute() {
+      const start = document.getElementById("start").value;
+      const end = document.getElementById("end").value;
+      const preference = Array.from(document.querySelectorAll("input[name='preference']:checked")).map(cb => cb.value);
+      const routeType = document.getElementById("routeType").value;
+
+      const res = await fetch("http://127.0.0.1:5000/api/route", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ start, end, preference, route_type: routeType })
+      });
+
+      const data = await res.json();
+      const coords = data.route.map(p => L.latLng(p.latlon[0], p.latlon[1]));
+
+      window.routeMarkers.forEach(({marker, label}) => {
+          map.removeLayer(marker);
+          map.removeLayer(label);
+      });
+      window.routeMarkers = [];
+
+      data.route.forEach(p => {
+          const marker = L.marker([p.latlon[0], p.latlon[1]]).addTo(map);
+
+          const label = L.divIcon({
+              className: 'leaflet-label',
+              html: `<strong>${p.name}</strong>`,
+              iconSize: [100, 20],
+              iconAnchor: [-10, 10]
+          });
+
+          const labelMarker = L.marker([p.latlon[0], p.latlon[1]], {icon: label, interactive: false}).addTo(map);
+
+          window.routeMarkers.push({marker: marker, label: labelMarker});
+      });
+
+      if (routingControl) map.removeControl(routingControl);
+      routingControl = L.Routing.control({
+          waypoints: coords,
+          routeWhileDragging: false,
+          show: false,
+          addWaypoints: false
+      }).addTo(map);
+  }
+</script>
+</body>
+</html>
