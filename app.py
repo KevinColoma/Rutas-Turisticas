@@ -5,6 +5,13 @@ from math import radians, sin, cos, sqrt, atan2
 import os
 
 
+
+from flask import render_template
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
 app = Flask(__name__)
 CORS(app)
 
