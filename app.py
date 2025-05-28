@@ -6,14 +6,17 @@ import os
 
 
 
-from flask import render_template
+from flask import Flask, render_template
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-app = Flask(__name__)
-CORS(app)
+
 
 # Coordenadas de los lugares
 
@@ -370,7 +373,5 @@ def get_route():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
-
-
+    app.run(host="0.0.0.0", port=port, debug=True)
 
